@@ -15,7 +15,7 @@ let chatHistory = [
   {
     role: "assistant",
     content:
-      "Hello! I'm an LLM chat app powered by Cloudflare Workers AI. How can I help you today?",
+      "Hello! I use retrieval-augmented generation (RAG) to reference SONiC docs when answering your questions. How can I help you with SONiC?",
   },
 ];
 let isProcessing = false;

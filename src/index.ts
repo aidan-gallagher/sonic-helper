@@ -67,6 +67,37 @@ async function handleChatRequest(
       messages.unshift({ role: "system", content: SYSTEM_PROMPT });
     }
 
+    /* ------------------ Retrieval Augmented Generation Start ------------------ */
+    // Extract last user message (to use as query)
+    const lastUserMessage = [...messages].reverse().find(msg => msg.role === "user")?.content || "";
+
+    // Query AutoRAG vector DB
+    const searchResponse = await env.AI.autorag("sonic-helper").search({
+      query: lastUserMessage,
+      max_num_results: 3,         // number of docs to retrieve
+      rewrite_query: true,        // optional: improve query quality
+      ranking_options: {
+        score_threshold: 0.3,     // optional: ignore poor matches
+      },
+    });
+
+    console.log("RAG searchResponse.data:", JSON.stringify(searchResponse.data, null, 2));
+
+    // Format the retrieved docs into a single string
+    const retrievedDocs = searchResponse.data
+      .map(match => match.content.map(content => content.text).join("\n\n"))
+      .join("\n\n---\n\n");
+
+    console.log("RAG retrievedDocs:", retrievedDocs);
+
+
+    // Inject the retrieved docs as a system message right after the initial system prompt
+    messages.splice(1, 0, {
+      role: "system",
+      content: `Here are some relevant documents that might help:\n\n${retrievedDocs}`,
+    });
+    /* ------------------ Retrieval Augmented Generation End ------------------ */
+
     const response = await env.AI.run(
       MODEL_ID,
       {
