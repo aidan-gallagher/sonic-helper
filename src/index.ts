@@ -14,8 +14,10 @@ import { Env, ChatMessage } from "./types";
 const MODEL_ID = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
 // Default system prompt
-const SYSTEM_PROMPT =
-  "You are a helpful, friendly assistant. Provide concise and accurate responses.";
+const SYSTEM_PROMPT = `You are a technically accurate assistant for SONiC NOS. You receive real-time document context using a retrieval system (RAG).
+This content appears in a system message.
+If no documents are found, you will inform the user..
+Use markdown and code blocks. Your users are network engineers or operators. Never guess or make up commands.`;
 
 export default {
   /**
@@ -74,10 +76,10 @@ async function handleChatRequest(
     // Query AutoRAG vector DB
     const searchResponse = await env.AI.autorag("sonic-helper").search({
       query: lastUserMessage,
-      max_num_results: 3,         // number of docs to retrieve
-      rewrite_query: true,        // optional: improve query quality
+      max_num_results: 3,        
+      rewrite_query: true,       
       ranking_options: {
-        score_threshold: 0.3,     // optional: ignore poor matches
+        score_threshold: 0.3,     
       },
     });
 
@@ -85,17 +87,35 @@ async function handleChatRequest(
 
     // Format the retrieved docs into a single string
     const retrievedDocs = searchResponse.data
-      .map(match => match.content.map(content => content.text).join("\n\n"))
+      .map((match) => {
+        const source = match.filename || match.file_id;
+        const body = match.content.map((c) => c.text).join("\n\n");
+        return `Source: ${source}\nScore: ${match.score}\n\n${body}`;
+      })
       .join("\n\n---\n\n");
 
     console.log("RAG retrievedDocs:", retrievedDocs);
 
+    // Create Table of sources
+    const sortedResults = [...searchResponse.data].sort((a, b) => b.score - a.score);
+    let table = `\n\n\n---\n\n\n The following files from the knowledge base were used \n\n\n| Filename | Score |\n| --- | --- |\n`;
+    for (const match of sortedResults) {
+      const filename = match.filename || match.file_id || "Unknown";
+      const score = match.score.toFixed(3);
+      table += `| ${filename} | ${score} |\n`;
+    }
 
-    // Inject the retrieved docs as a system message right after the initial system prompt
+    const ragPrompt = searchResponse.data.length > 0
+      ? `Documents found. The following documents were retrieved from the SONiC knowledge base. 
+         Each document has a relevance score; please prioritize information from documents with higher scores.:\n\n${retrievedDocs}
+         Always add the following text and table to very end of your answer ${table}`
+      : `Document not found. Inform the user no information from the knowledge base will be used.`;
+
     messages.splice(1, 0, {
       role: "system",
-      content: `Here are some relevant documents that might help:\n\n${retrievedDocs}`,
+      content: ragPrompt,
     });
+
     /* ------------------ Retrieval Augmented Generation End ------------------ */
 
     const response = await env.AI.run(

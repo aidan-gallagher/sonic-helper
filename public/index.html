@@ -69,6 +69,20 @@
         max-width: 80%;
       }
 
+      .message pre {
+        white-space: pre-wrap; /* Preserves whitespace and wraps text */
+        word-break: break-all; /* Breaks words to prevent overflow */
+        /* You might want to add some padding or a background to pre blocks */
+        background-color: #e0e0e0; /* Example: a slightly darker background for code blocks */
+        padding: 0.5rem;
+        border-radius: 4px;
+        overflow-x: auto; /* Adds horizontal scroll for very long lines if break-all isn't enough */
+      }
+
+      .message code {
+        word-break: break-all; /* Ensures inline code also breaks */
+      }
+      
       .user-message {
         background-color: var(--user-msg-bg);
         align-self: flex-end;
