@@ -108,7 +108,7 @@ async function handleChatRequest(
     const ragPrompt = searchResponse.data.length > 0
       ? `Documents found. The following documents were retrieved from the SONiC knowledge base. 
          Each document has a relevance score; please prioritize information from documents with higher scores.:\n\n${retrievedDocs}
-         Always add the following text and table to very end of your answer ${table}`
+         At the end of your answer always add 2 empty lines, a horizontal line and the following text: ${table}`
       : `Document not found. Inform the user no information from the knowledge base will be used.`;
 
     messages.splice(1, 0, {
