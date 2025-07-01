@@ -16,7 +16,7 @@ const MODEL_ID = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 // Default system prompt
 const SYSTEM_PROMPT = `You are a technically accurate assistant for SONiC NOS. You receive real-time document context using a retrieval system (RAG).
 This content appears in a system message.
-If no documents are found, you will inform the user..
+If no documents are found, you will inform the user that no RAG failed to find any documents.
 Use markdown and code blocks. Your users are network engineers or operators. Never guess or make up commands.`;
 
 export default {
@@ -98,7 +98,7 @@ async function handleChatRequest(
 
     // Create Table of sources
     const sortedResults = [...searchResponse.data].sort((a, b) => b.score - a.score);
-    let table = `\n\n\n---\n\n\n The following files from the knowledge base were used \n\n\n| Filename | Score |\n| --- | --- |\n`;
+    let table = `\n\n\n---\n\n\n| Filename | Score |\n| --- | --- |\n`;
     for (const match of sortedResults) {
       const filename = match.filename || match.file_id || "Unknown";
       const score = match.score.toFixed(3);
@@ -106,10 +106,10 @@ async function handleChatRequest(
     }
 
     const ragPrompt = searchResponse.data.length > 0
-      ? `Documents found. The following documents were retrieved from the SONiC knowledge base. 
+      ? `RAG documents found. The following documents were retrieved from the SONiC knowledge base. 
          Each document has a relevance score; please prioritize information from documents with higher scores.:\n\n${retrievedDocs}
          At the end of your answer always add 2 empty lines, a horizontal line and the following text: ${table}`
-      : `Document not found. Inform the user no information from the knowledge base will be used.`;
+      : `RAG documents not found. Inform the user no information from the knowledge base will be used.`;
 
     messages.splice(1, 0, {
       role: "system",
