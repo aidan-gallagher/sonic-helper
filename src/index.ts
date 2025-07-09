@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import type { Env, ChatMessage } from './types'
 
-const MODEL_ID = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+const MODEL_ID = "@cf/meta/llama-4-scout-17b-16e-instruct"
 
 const SYSTEM_PROMPT = `You are a technically accurate assistant for SONiC NOS. You receive real-time document context using a retrieval system (RAG).
 This content appears in a system message.
@@ -57,7 +57,7 @@ async function handleChatRequest(c: Parameters<typeof app.post>[1]) {
 
     const ragPrompt =
       searchResponse.data.length > 0
-        ? `RAG documents found. The following documents were retrieved from the SONiC knowledge base. 
+        ? `RAG documents found. The following documents were retrieved from the SONiC knowledge base.
          Each document has a relevance score; please prioritize information from documents with higher scores.:\n\n${retrievedDocs}
          At the end of your answer always add 2 empty lines, a horizontal line and the following text: ${table}`
         : `RAG documents not found. Inform the user no information from the knowledge base will be used.`
@@ -74,11 +74,16 @@ async function handleChatRequest(c: Parameters<typeof app.post>[1]) {
         max_tokens: 1024,
       },
       {
+        gateway: {
+          id: "default"
+        }
+      },
+      {
         returnRawResponse: true,
       }
     )
 
-    return response
+    return c.json(response)
   } catch (error) {
     console.error('Error processing chat request:', error)
     return c.json({ error: 'Failed to process request' }, 500)
