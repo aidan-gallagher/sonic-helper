@@ -1,61 +1,121 @@
 # SONiC Helper
 
-SONiC Helper is a chat application for SONiC NOS. Before invoking the LLM it uses RAG to retrieve relevant SONiC documentation. It is powered by Cloudflare Workers AI.
+A conversational AI chatbot for SONiC NOS (Network Operating System) queries, powered by the Cloudflare developer platform.
+
+**Website:** https://sonic-helper.aidangallagher.workers.dev/
+
+## Problem Statement
+
+### Limitations of Current Tools
+
+- **ChatGPT** performs well for general topics like Linux, but struggles with SONiC-specific queries because it lacks sufficient training data.
+- **Existing docs** (SONiC documentation, internal wikis, mailing lists, etc.) contain valuable knowledge, but aren't easily searchable using natural, conversational English.
+
+### Manual Process
+
+* Engineers currently rely on manual searches across Confluence, GitHub, and other docs to find SONiC information.
+
+* This often requires familiarity with SONiC terminology and where specific details are documented.
 
 
-### Development
+## Solution
 
-Start a local development server:
+* SONiC Chatbot provides a conversational interface for all SONiC related questions.
+* Acts as a virtual assistant, remembering previous queries for context.
 
-```bash
-wrangler dev
-```
 
-This will start a local server at http://localhost:8787.
+![Chatbot Screenshot](docs/screenshot.png)
 
-Note: Using Workers AI accesses your Cloudflare account even during local development, which will incur usage charges.
+## Tech Stack
 
-### Deployment
+| Component | Description |
+|-----------|-------------|
+| [Cloudflare Workers](https://developers.cloudflare.com/workers/) | Serverless compute platform |
+| [Hono](https://hono.dev/) | Lightweight web framework |
+| [Workers AI](https://developers.cloudflare.com/workers-ai/) | LLM inference (Llama 4 Scout) |
+| [R2](https://developers.cloudflare.com/r2/) | Object storage for SONiC documents |
+| [AI Search](https://developers.cloudflare.com/ai-search/) | RAG pipeline (formerly AutoRAG) |
 
-Push to Git remote.
+## Design
+
+### System Design
+
+![Design](docs/design.png)
+
+### Control Flow
+
+1. User types a question (e.g., "How do I configure BGP in SONiC?")
+2. Browser sends `POST /api/chat` with full message history
+3. AI Search finds relevant SONiC documents from the R2 bucket
+4. Relevant documents are augmented into the chat conversation
+5. LLM processes the augmented conversation
+6. LLM response is returned to the user
+
+### AI Search (AutoRAG)
+
+- SONiC documents (mailing lists, internal wikis, SONiC docs, GitHub, etc.) are uploaded to an R2 bucket
+- AI Search monitors the bucket and generates embeddings in a vector database
+- Enables natural language search using semantic similarity
+- Search results augment LLM queries with relevant context
 
 ## Project Structure
 
 ```
 /
-├── public/             # Static assets
-│   ├── index.html      # Chat UI HTML
-│   └── chat.js         # Chat UI frontend script
+├── docs/                # Documentation assets
+├── public/              # Static web assets
+│   ├── index.html       # Chat UI
+│   ├── chat.js          # Frontend script
+│   └── icons/           # PWA icons
 ├── src/
-│   ├── index.ts        # Main Worker entry point
-│   └── types.ts        # TypeScript type definitions
-├── test/               # Test files
-├── wrangler.jsonc      # Cloudflare Worker configuration
-├── tsconfig.json       # TypeScript configuration
-└── README.md           # This documentation
+│   ├── index.ts         # Worker entry point & API
+│   └── types.ts         # TypeScript definitions
+├── wrangler.jsonc       # Cloudflare Worker configuration
+└── package.json
 ```
 
-## How It Works
+## Development
 
-### Backend
+### Prerequisites
 
-The backend is built with Cloudflare Workers and uses the Workers AI platform to generate responses. The main components are:
+- Node.js
+- Cloudflare account with Workers AI access
 
-1. **API Endpoint** (`/api/chat`): Accepts POST requests with chat messages and streams responses
-2. **Streaming**: Uses Server-Sent Events (SSE) for real-time streaming of AI responses
-3. **Workers AI Binding**: Connects to Cloudflare's AI service via the Workers AI binding
+### Local Development
 
-### Frontend
+```bash
+npm install
+npm run dev
+```
 
-The frontend is a simple HTML/CSS/JavaScript application that:
+This starts a local server at http://localhost:8787.
 
-1. Presents a chat interface
-2. Sends user messages to the API
-3. Processes streaming responses in real-time
-4. Maintains chat history on the client side
+> **Note:** Workers AI accesses your Cloudflare account even during local development, which will incur usage charges.
+
+### Deployment
+
+```bash
+npm run deploy
+```
+
+Or push to the Git remote for CI/CD deployment.
+
+### Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start local development server |
+| `npm run deploy` | Deploy to Cloudflare Workers |
+| `npm run check` | Type check and dry-run deploy |
+| `npm test` | Run tests |
+
+## Background
+
+This project is a reimplementation of [SONiC Scout](https://sonicfoundation.dev/sonic-scout-enhancing-open-networking-with-ai/), an AI chatbot that won the SONiC community 2024 hackathon. SONiC Helper rebuilds the concept using the Cloudflare developer platform.
 
 ## Resources
 
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
 - [Cloudflare Workers AI Documentation](https://developers.cloudflare.com/workers-ai/)
-- [Workers AI Models](https://developers.cloudflare.com/workers-ai/models/)
+- [Cloudflare AI Search Documentation](https://developers.cloudflare.com/ai-search/)
+- [Hono Framework](https://hono.dev/)
